@@ -8,16 +8,22 @@ import {
     StyleSheet,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
 
 const OneController = () => {
     const [name, setName] = useState('');
     const [players, setPlayers] = useState<string[]>([]);
+    const navigation = useNavigation<any>();
 
     const addPlayer = () => {
         if (name.trim()) {
             setPlayers([...players, name.trim()]);
             setName('');
         }
+    };
+
+    const sendPlayers = () => {
+        navigation.navigate('PlayersScreen', { players });
     };
 
     const renderItem = ({ item }: { item: string }) => (
@@ -47,6 +53,9 @@ const OneController = () => {
                 keyExtractor={(_, index) => index.toString()}
                 style={styles.playerList}
             />
+            <TouchableOpacity style={styles.sendButton} onPress={sendPlayers}>
+                <Text style={styles.sendText}>Send Players</Text>
+            </TouchableOpacity>
         </LinearGradient>
     );
 };
@@ -91,7 +100,18 @@ const styles = StyleSheet.create({
     },
     playerText: {
         fontSize: 16,
-        color: '#fff', // Changed from '#333' to white
+        color: '#fff',
+    },
+    sendButton: {
+        marginTop: 16,
+        padding: 12,
+        backgroundColor: '#28a745',
+        borderRadius: 4,
+        alignItems: 'center',
+    },
+    sendText: {
+        color: '#fff',
+        fontSize: 16,
     },
 });
 
