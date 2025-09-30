@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
     View,
     Text,
@@ -8,22 +8,30 @@ import {
     StyleSheet,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 
 const OneController = () => {
     const [name, setName] = useState('');
     const [players, setPlayers] = useState<string[]>([]);
-    const navigation = useNavigation<any>();
+    const router = useRouter();
+    const inputRef = useRef<TextInput>(null);
 
     const addPlayer = () => {
         if (name.trim()) {
             setPlayers([...players, name.trim()]);
             setName('');
+            // Focus the TextInput after adding
+            setTimeout(() => {
+                inputRef.current?.focus();
+            }, 100);
         }
     };
 
     const sendPlayers = () => {
-        navigation.navigate('PlayersScreen', { players });
+        router.push({ 
+            pathname: '/one-controller-players', 
+            params: { players: JSON.stringify(players) } 
+        });
     };
 
     const renderItem = ({ item }: { item: string }) => (
@@ -36,12 +44,14 @@ const OneController = () => {
         <LinearGradient colors={['#141e30', '#243b55']} style={styles.container}>
             <View style={styles.inputContainer}>
                 <TextInput
+                    ref={inputRef}
                     style={styles.textInput}
                     value={name}
                     onChangeText={setName}
                     placeholder="Enter player name"
-                    placeholderTextColor="#666"
+                    placeholderTextColor="#660"
                     onSubmitEditing={addPlayer}
+                    returnKeyType="done"
                 />
                 <TouchableOpacity style={styles.tickButton} onPress={addPlayer}>
                     <Text style={styles.tickText}>&#10003;</Text>
@@ -54,7 +64,7 @@ const OneController = () => {
                 style={styles.playerList}
             />
             <TouchableOpacity style={styles.sendButton} onPress={sendPlayers}>
-                <Text style={styles.sendText}>Send Players</Text>
+                <Text style={styles.sendText}>Start</Text>
             </TouchableOpacity>
         </LinearGradient>
     );
