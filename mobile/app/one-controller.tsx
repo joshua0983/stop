@@ -10,33 +10,52 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 
+function uniqueId() {
+    return Math.random().toString(36).substr(2, 9) + Date.now();
+}
+
+interface Player {
+    id: string;
+    name: string;
+}
+
 const OneController = () => {
     const [name, setName] = useState('');
-    const [players, setPlayers] = useState<string[]>([]);
+    const [players, setPlayers] = useState<Player[]>([]);
     const router = useRouter();
     const inputRef = useRef<TextInput>(null);
 
     const addPlayer = () => {
         if (name.trim()) {
-            setPlayers([...players, name.trim()]);
+            setPlayers([...players, { id: uniqueId(), name: name.trim() }]);
             setName('');
-            // Focus the TextInput after adding
             setTimeout(() => {
                 inputRef.current?.focus();
             }, 100);
         }
     };
 
+    const removePlayer = (id: string) => {
+        setPlayers(players.filter(player => player.id !== id));
+    };
+
     const sendPlayers = () => {
-        router.push({ 
-            pathname: '/one-controller-players', 
-            params: { players: JSON.stringify(players) } 
+        // Pass only names, as per previous code
+        router.push({
+            pathname: '/one-controller-players',
+            params: { players: JSON.stringify(players.map(p => p.name)) }
         });
     };
 
-    const renderItem = ({ item }: { item: string }) => (
+    const renderItem = ({ item }: { item: Player }) => (
         <View style={styles.playerItem}>
-            <Text style={styles.playerText}>{item}</Text>
+            <Text style={styles.playerText}>{item.name}</Text>
+            <TouchableOpacity
+                style={styles.removeButton}
+                onPress={() => removePlayer(item.id)}
+            >
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 18 }}>×</Text>
+            </TouchableOpacity>
         </View>
     );
 
@@ -60,7 +79,7 @@ const OneController = () => {
             <FlatList
                 data={players}
                 renderItem={renderItem}
-                keyExtractor={(_, index) => index.toString()}
+                keyExtractor={(item) => item.id}
                 style={styles.playerList}
             />
             <TouchableOpacity style={styles.sendButton} onPress={sendPlayers}>
@@ -104,6 +123,8 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     playerItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
         paddingVertical: 10,
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
@@ -111,6 +132,16 @@ const styles = StyleSheet.create({
     playerText: {
         fontSize: 16,
         color: '#fff',
+        flex: 1,
+    },
+    removeButton: {
+        backgroundColor: '#e53e3e',
+        borderRadius: 4,
+        paddingHorizontal: 10,
+        paddingVertical: 2,
+        marginLeft: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     sendButton: {
         marginTop: 16,

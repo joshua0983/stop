@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, Button, StyleSheet, TouchableOpacity, Modal, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, TextInput } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { TextInput } from 'react-native';
+
+// Generate a unique id for each player instance
+function uniqueId() {
+  return Math.random().toString(36).substr(2, 9) + Date.now();
+}
 
 interface Player {
+  id: string;
   name: string;
   points: number;
 }
@@ -17,53 +22,59 @@ const OneControllerPlayers = () => {
   const { players } = useLocalSearchParams();
   const initialPlayers: string[] = players ? JSON.parse(players as string) : [];
   const [playerList, setPlayerList] = useState<Player[]>(
-    initialPlayers.map(name => ({ name, points: 0 }))
+    initialPlayers.map(name => ({ id: uniqueId(), name, points: 0 }))
   );
-  const [selectedPlayerIndex, setSelectedPlayerIndex] = useState<number | null>(null);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [actionModalVisible, setActionModalVisible] = useState(false);
   const [assignModalVisible, setAssignModalVisible] = useState(false);
-  const [assignedPoints, setAssignedPoints] = useState<{ [key: string]: number }>({});
+  const [cardValue, setCardValue] = useState<{ [id: string]: string }>({});
+  const [defaultAddition, setDefaultAddition] = useState<{ [id: string]: number }>({});
   const [winnerModalVisible, setWinnerModalVisible] = useState(false);
   const [winners, setWinners] = useState<Player[]>([]);
 
   // Handle player action selection
-  const handleAction = (index: number, action: string) => {
-    setSelectedPlayerIndex(index);
-    if (action === 'left') {
-      // Remove player from game
-      setPlayerList(prev => prev.filter((_, i) => i !== index));
-      setSelectedPlayerIndex(null);
-    } else {
-      // Open modal to choose points for all players
-      setActionModalVisible(false);
-      setAssignModalVisible(true);
+  const handleAction = (playerId: string, action: string) => {
+    setSelectedPlayerId(playerId);
 
-      // Initialize assigned points (default to 0 for everyone)
-      let defaultPoints: { [key: string]: number } = {};
-      playerList.forEach(player => {
-        defaultPoints[player.name] = 0;
-      });
-      // Adjust points for chosen action
-      const chosenName = playerList[index].name;
-      if (action === 'won-stop') defaultPoints[chosenName] = -10;
-      if (action === 'won') defaultPoints[chosenName] = 0;
-      if (action === 'lost') defaultPoints[chosenName] = 20;
-      setAssignedPoints(defaultPoints);
+    let defaultCardValue: { [id: string]: string } = {};
+    playerList.forEach(player => {
+      defaultCardValue[player.id] = '';
+    });
+
+    let da: { [id: string]: number } = {};
+    playerList.forEach(player => {
+      da[player.id] = 0; // default for all is zero
+    });
+    if (action === 'won-stop') da[playerId] = -10;
+    if (action === 'won') da[playerId] = 0;
+    if (action === 'lost') da[playerId] = 20;
+
+    if (action === 'left') {
+      setPlayerList(prev => prev.filter((p) => p.id !== playerId));
+      setSelectedPlayerId(null);
+      setDefaultAddition({});
+      return;
     }
+
+    setActionModalVisible(false);
+    setAssignModalVisible(true);
+    setDefaultAddition(da);
+    setCardValue(defaultCardValue);
   };
 
-  // Confirm new points for all players
+  // Add card values to player totals (system and user input)
   const handleAssignPoints = () => {
     const newList = playerList.map(player => ({
       ...player,
-      points: player.points + (assignedPoints[player.name] || 0),
+      points: player.points +
+        (defaultAddition[player.id] || 0) +
+        (parseInt(cardValue[player.id]) || 0),
     }));
 
     setPlayerList(newList);
     setAssignModalVisible(false);
 
-    // Check for winner
-    const over50 = newList.filter((p) => p.points > 50);
+    const over50 = newList.filter((p) => p.points >= 50);
     if (over50.length) {
       const winners = getLowestScorePlayers(newList);
       setWinners(winners);
@@ -71,31 +82,34 @@ const OneControllerPlayers = () => {
     }
   };
 
-  // Handle remove from modal
-  const handleLeftGameFromModal = (name: string) => {
-    setPlayerList(prev => prev.filter(player => player.name !== name));
-    const ap = {...assignedPoints};
-    delete ap[name];
-    setAssignedPoints(ap);
+  // Remove player from modal
+  const handleLeftGameFromModal = (playerId: string) => {
+    setPlayerList(prev => prev.filter(player => player.id !== playerId));
+    const cv = { ...cardValue };
+    delete cv[playerId];
+    setCardValue(cv);
+    const da = { ...defaultAddition };
+    delete da[playerId];
+    setDefaultAddition(da);
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Players</Text>
-      {playerList.map((player, index) => (
-        <View key={player.name} style={styles.playerRow}>
+      {playerList.map((player) => (
+        <View key={player.id} style={styles.playerRow}>
           <Text style={styles.playerText}>
             {player.name}: {player.points} points
           </Text>
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => { setSelectedPlayerIndex(index); setActionModalVisible(true); }}>
-            <Text style={{color: '#fff'}}>Actions</Text>
+            onPress={() => { setSelectedPlayerId(player.id); setActionModalVisible(true); }}>
+            <Text style={{ color: '#fff' }}>Actions</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.leftButton}
-            onPress={() => handleAction(index, 'left')}>
-            <Text style={{color: '#fff'}}>Left Game</Text>
+            onPress={() => handleAction(player.id, 'left')}>
+            <Text style={{ color: '#fff' }}>Left Game</Text>
           </TouchableOpacity>
         </View>
       ))}
@@ -105,20 +119,20 @@ const OneControllerPlayers = () => {
         <View style={styles.modalBackground}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
-              Choose outcome for {selectedPlayerIndex !== null
-                ? playerList[selectedPlayerIndex]?.name
+              Choose outcome for {selectedPlayerId
+                ? playerList.find(p => p.id === selectedPlayerId)?.name
                 : ""}
             </Text>
-            <TouchableOpacity style={styles.modalButton} onPress={() => handleAction(selectedPlayerIndex!, 'won-stop')}>
+            <TouchableOpacity style={styles.modalButton} onPress={() => handleAction(selectedPlayerId!, 'won-stop')}>
               <Text style={styles.modalButtonText}>Won with stop! (-10)</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.modalButton} onPress={() => handleAction(selectedPlayerIndex!, 'won')}>
+            <TouchableOpacity style={styles.modalButton} onPress={() => handleAction(selectedPlayerId!, 'won')}>
               <Text style={styles.modalButtonText}>Won (+0)</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.modalButton} onPress={() => handleAction(selectedPlayerIndex!, 'lost')}>
+            <TouchableOpacity style={styles.modalButton} onPress={() => handleAction(selectedPlayerId!, 'lost')}>
               <Text style={styles.modalButtonText}>Lost (+20)</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.modalButtonDanger} onPress={() => handleAction(selectedPlayerIndex!, 'left')}>
+            <TouchableOpacity style={styles.modalButtonDanger} onPress={() => handleAction(selectedPlayerId!, 'left')}>
               <Text style={styles.modalButtonText}>Left Game</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.modalButton} onPress={() => setActionModalVisible(false)}>
@@ -128,29 +142,30 @@ const OneControllerPlayers = () => {
         </View>
       </Modal>
 
-      {/* Assign points modal */}
+      {/* "Card Value Owned" modal */}
       <Modal visible={assignModalVisible} transparent animationType="slide">
         <View style={styles.modalBackground}>
           <ScrollView contentContainerStyle={styles.modalContent}>
-            <Text style={styles.modalTitle}>Assign extra points to all players</Text>
+            <Text style={styles.modalTitle}>Card Value Owned</Text>
             {playerList.map((player) => (
-              <View key={player.name} style={styles.assignRow}>
-                <Text style={{color:'#fff'}}>{player.name}: </Text>
+              <View key={player.id} style={styles.assignRow}>
+                <Text style={{ color: '#fff' }}>{player.name}: </Text>
                 <TextInput
                   style={styles.assignInput}
                   keyboardType="numeric"
-                  value={assignedPoints[player.name]?.toString() ?? "0"}
+                  value={cardValue[player.id] ?? ''}
+                  placeholder="0"
+                  placeholderTextColor="#aaa"
                   onChangeText={text => {
-                    let val = parseInt(text) || 0;
-                    setAssignedPoints(prev => ({
+                    setCardValue(prev => ({
                       ...prev,
-                      [player.name]: val,
+                      [player.id]: text,
                     }));
                   }}
                 />
                 <TouchableOpacity style={styles.leftButtonSmall}
-                  onPress={() => handleLeftGameFromModal(player.name)}>
-                  <Text style={{color:'#fff'}}>Left Game</Text>
+                  onPress={() => handleLeftGameFromModal(player.id)}>
+                  <Text style={{ color: '#fff' }}>Left Game</Text>
                 </TouchableOpacity>
               </View>
             ))}
@@ -170,7 +185,7 @@ const OneControllerPlayers = () => {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Winner(s)!</Text>
             {winners.map((w) => (
-              <Text style={styles.winnerName} key={w.name}>{w.name} ({w.points})</Text>
+              <Text style={styles.winnerName} key={w.id}>{w.name} ({w.points})</Text>
             ))}
             <TouchableOpacity style={styles.modalButton} onPress={() => setWinnerModalVisible(false)}>
               <Text style={styles.modalButtonText}>Close</Text>
@@ -178,7 +193,6 @@ const OneControllerPlayers = () => {
           </View>
         </View>
       </Modal>
-
     </View>
   );
 };
