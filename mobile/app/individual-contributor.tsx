@@ -1,33 +1,33 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 
-export default function Home() {
+const IndividualContributor = () => {
   const router = useRouter();
 
   return (
     <LinearGradient colors={['#141e30', '#243b55']} style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerText}>STOP!</Text>
+        <Text style={styles.headerText}>Individual Handler</Text>
       </View>
       <View style={styles.buttonContainer}>
         <TouchableOpacity
-          style={styles.button}
-          onPress={() => router.push({ pathname: '/one-controller' })}
+          style={styles.buttonHost}
+          onPress={() => router.push({ pathname: '/host' })}
         >
-          <Text style={styles.buttonText}>One Controller</Text>
+          <Text style={styles.buttonText}>Host</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={styles.button}
-          onPress={() => router.push({ pathname: '/individual-contributor' })}
+          style={styles.buttonPlayer}
+          onPress={() => router.push({ pathname: '/player' })}
         >
-          <Text style={styles.buttonText}>Individual Handler</Text>
+          <Text style={styles.buttonText}>Player</Text>
         </TouchableOpacity>
       </View>
     </LinearGradient>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   headerText: {
-    fontSize: 80, // Increased font size for a bigger stop sign
+    fontSize: 36,
     fontWeight: 'bold',
     color: '#00e0ff',
     textShadowColor: '#000',
@@ -51,13 +51,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  button: {
+  buttonHost: {
     backgroundColor: '#00e0ff',
     paddingVertical: 20,
     paddingHorizontal: 30,
     borderRadius: 10,
     elevation: 5,
-    marginVertical: 5,
+    marginVertical: 8,
+    width: 220,
+    alignItems: 'center',
+  },
+  buttonPlayer: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 20,
+    paddingHorizontal: 30,
+    borderRadius: 10,
+    elevation: 5,
+    marginVertical: 8,
+    width: 220,
+    alignItems: 'center',
   },
   buttonText: {
     color: '#141e30',
@@ -65,3 +77,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+export default IndividualContributor;

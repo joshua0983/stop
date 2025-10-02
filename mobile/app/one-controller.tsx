@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
         marginLeft: 8,
         alignItems: 'center',
         justifyContent: 'center',
-    },
+    }, 
     sendButton: {
         marginTop: 16,
         padding: 12,
